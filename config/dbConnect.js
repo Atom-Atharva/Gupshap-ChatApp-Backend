@@ -11,3 +11,4 @@ export const connectDB = () => {
             console.log(err);
         });
 };
+

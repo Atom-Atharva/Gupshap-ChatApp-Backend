@@ -37,7 +37,12 @@ const registerUser = asyncHandler(async (req, res) => {
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
         fs.unlinkSync(avatarFilePath);
-        throw new ApiError(400, "User Already Exist");
+        throw new ApiError(400, "User Email Already Exist");
+    }
+    const existingName = await User.findOne({ name: name });
+    if (existingName) {
+        fs.unlinkSync(avatarFilePath);
+        throw new ApiError(400, "User Name Already Exist");
     }
 
     // Upload On Cloudinary
@@ -102,7 +107,7 @@ const logInUser = asyncHandler(async (req, res) => {
     const { refreshToken, accessToken } = await generateAccessAndRefreshToken(
         user._id
     );
-    console.log(refreshToken, accessToken);
+    // console.log(refreshToken, accessToken);
 
     const loggedInUser = await User.findById(user._id).select(
         "-password -refreshToken"
@@ -130,5 +135,14 @@ const logoutUser = asyncHandler(async (req, res) => {
         .clearCookie("refreshToken", options)
         .json(new ApiResponse(200, {}, "User Logged Out"));
 });
+
+/**
+ * Search User
+ * Send Friend Request
+ * Accept Friend Request
+ * Get My Friends
+ * Get My Profile
+ * Get My Notification
+ */
 
 export { registerUser, logInUser, logoutUser };

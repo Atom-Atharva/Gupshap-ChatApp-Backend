@@ -26,4 +26,7 @@ app.use(cookieParser());
 import userRouter from "./routes/user.route.js";
 app.use("/api/v1/users", userRouter);
 
+import chatRouter from "./routes/chat.route.js";
+app.use("/api/v1/chat", chatRouter);
+
 export { app };

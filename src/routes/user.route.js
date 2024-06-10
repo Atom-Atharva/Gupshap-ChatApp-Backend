@@ -1,9 +1,15 @@
 import { Router } from "express";
 import { upload } from "../middlewares/multer.middleware.js";
 import {
+    acceptFriendRequest,
+    getAllUser,
+    getMyFriends,
+    getMyNotfications,
+    getMyProfile,
     logInUser,
     logoutUser,
     registerUser,
+    sendFriendRequest,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -14,5 +20,12 @@ router.route("/login").post(logInUser);
 
 // Secured Routes
 router.route("/logout").post(verifyJWT, logoutUser);
+router.route("/getAllUser").get(verifyJWT, getAllUser);
+router.route("/getMyProfile").get(verifyJWT, getMyProfile);
+router.route("/getMyFriends").get(verifyJWT, getMyFriends);
+router.route("/getMyNotifications").get(verifyJWT, getMyNotfications);
+router.route("/sendFriendRequest").post(verifyJWT, sendFriendRequest);
+router.route("/acceptFriendRequest").post(verifyJWT, acceptFriendRequest);
+
 
 export default router;

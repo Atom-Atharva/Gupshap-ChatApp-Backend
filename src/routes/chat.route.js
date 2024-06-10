@@ -11,6 +11,7 @@ router.route("/my-chat/groups").get(verifyJWT,getMyGroups);
 router.route("/addmembers").put(verifyJWT,addMembers);
 router.route("/removemember").put(verifyJWT,removeMembers);
 router.route("/leave-group/:id").delete(verifyJWT,leaveGroup);
+// router.route("/message").post(upload.array("files", 5),sendattachements)
 
 
 export default router;

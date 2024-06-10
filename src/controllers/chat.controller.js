@@ -3,7 +3,10 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Chat } from "../models/chat.model.js";
 import { User } from "../models/user.model.js";
+import { Message } from "../models/message.model.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
+// TODO --> Cloudinary Avatar
 const newGroupChat = asyncHandler(async (req, res) => {
     const { name, members } = req.body;
     if (!name) {
@@ -23,6 +26,7 @@ const newGroupChat = asyncHandler(async (req, res) => {
     return res.status(201).json(new ApiResponse(201, {}, "Group Chat Created"));
 });
 
+// TODO --> Group Avatar
 const getMyChats = asyncHandler(async (req, res) => {
     const chats = await Chat.find({ members: req.user._id }).populate(
         "members",
@@ -58,11 +62,12 @@ const getMyChats = asyncHandler(async (req, res) => {
             )
         );
 });
+
+// TODO --> Get Group Avatar
 const getMyGroups = asyncHandler(async (req, res) => {
     const chats = await Chat.find({
         members: req.user._id,
         groupChat: true,
-        creator: req.user._id,
     }).populate("members", "name avatar");
     const groups = chats.map(({ members, _id, groupChat, name }) => ({
         _id,
@@ -74,6 +79,7 @@ const getMyGroups = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, groups, "Group Retrieved sucessfully"));
 });
+
 const addMembers = asyncHandler(async (req, res) => {
     const { chatId, members } = req.body;
     if (!members || members.length < 1) {
@@ -106,6 +112,7 @@ const addMembers = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, {}, "Members added sucessfully"));
 });
+
 const removeMembers = asyncHandler(async (req, res) => {
     const { userId, chatId } = req.body;
     const [chat, userThatWillBeRemoved] = await Promise.all([
@@ -119,7 +126,10 @@ const removeMembers = asyncHandler(async (req, res) => {
         throw new ApiError(404, "This is not a group Chat");
     }
     if (chat.creator.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You are not allowed to remove the participants");
+        throw new ApiError(
+            403,
+            "You are not allowed to remove the participants"
+        );
     }
     if (chat.members.length <= 3) {
         throw new ApiError(400, "Group must have atleast 3 members");
@@ -132,6 +142,7 @@ const removeMembers = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, {}, "Members removed sucessfully"));
 });
+
 const leaveGroup = asyncHandler(async (req, res) => {
     const chatId = req.params.id;
     const chat = await Chat.findById(chatId);
@@ -154,6 +165,124 @@ const leaveGroup = asyncHandler(async (req, res) => {
         chat.save(),
     ]);
     await chat.save();
+});
+
+// const sendAttachments = asyncHandler(async (req, res) => {
+//     const { chatId } = req.body;
+
+//     const files = req.files || [];
+
+//     if (files.length < 1) throw new ApiError(400, "please upload attachments");
+
+//     if (files.length > 5)
+//         throw new ApiError(400, "files cant be greater than 5 file");
+
+//     const [chat, me] = await Promise.all([
+//         Chat.findById(chatId),
+//         User.findById(req.user._id, "name"),
+//     ]);
+
+//     if (!chat) throw new ApiError(404, "Chat not found");
+
+//     //   Upload files here
+//     // const attachments = await uploadOnCloudinary(files);
+
+//     const messageForDB = {
+//         content: "",
+//         attachments,
+//         sender: me._id,
+//         chat: chatId,
+//     };
+
+//     const message = await Message.create(messageForDB);
+
+//     return res.status(200).json({
+//         success: true,
+//         message,
+//     });
+// });
+
+const getChatDetails = asyncHandler(async (req, res) => {
+    if (req.query.populate === "true") {
+        const chat = await Chat.findById(req.param.id)
+            .populate("members", "name avatar")
+            .lean();
+        if (!chat) {
+            throw new ApiError(404, "Chat not found");
+        }
+        chat.members = chat.members.map(({ _id, name, avatar }) => ({
+            _id,
+            name,
+            avatar: avatar.url,
+        }));
+        return res.status(200).json(new ApiResponse(200, chat, ""));
+    } else {
+        const chat = await Chat.findById(req.param.id);
+        if (!chat) throw new ApiError(404, "Chat not found");
+
+        return res.status(200).json(new ApiResponse(200, chat, ""));
+    }
+});
+
+const getMessages = asyncHandler(async (req, res) => {
+    const chatId = req.params.id;
+    const { page = 1 } = req.query;
+    const resultPerPage = 20;
+
+    const skip = (page - 1) * resultPerPage;
+    const [messages, totalMessagesCount] = await Promise.all([
+        Message.find({ chat: chatId })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(resultPerPage)
+            .populate("sender", "name")
+            .lean(),
+        Message.countDocuments({ chat: chatId }),
+    ]);
+    const totalPages = Math.ceil(totalMessagesCount / resultPerPage) || 0;
+
+    return res.status(200).json({
+        success: true,
+        messages: messages.reverse(),
+        totalPages,
+    });
+});
+
+const renameGroup = asyncHandler(async (req, res) => {
+    const chatId = req.params.id;
+    const { name } = req.body;
+    const chat = await Chat.findById(chatId);
+    if (!chat) throw new ApiError(404, "Chat not found");
+    if (!chat.groupChat) throw new ApiError(404, "This is not a group chat");
+    if (chat.creator.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You are not allowed to rename the group");
+    }
+    chat.name = name;
+    await chat.save();
+    return res
+        .status(200)
+        .json(new ApiResponse(200, "Group renamed sucessfully"));
+});
+
+const deleteChat = asyncHandler(async (req, res) => {
+    const chatId = req.params.id;
+    const chat = await Chat.findById(chatId);
+    if (!chat) throw new ApiError(404, "Chat not found");
+    if (chat.groupChat && chat.creator.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You are not allowed to delete the group");
+    }
+    if (chat.groupChat && chat.creator.toString() !== req.user._id.toString()) {
+        throw new ApiError(403, "You are not allowed to delete the group");
+    }
+    if (!chat.groupChat && !chat.members.includes(req.user._id.toString())) {
+        throw new ApiError(403, "You are not allowed to delete the group");
+    }
+
+    await Promise.all([chat.deleteOne(), Message.deleteMany({ chat: chatId })]);
+    return res.status(200).json({
+        success: true,
+        message: "Chat deleted successfully",
+    });
 });
 
 export {

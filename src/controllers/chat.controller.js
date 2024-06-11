@@ -4,7 +4,10 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { Chat } from "../models/chat.model.js";
 import { User } from "../models/user.model.js";
 import { Message } from "../models/message.model.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import {
+    deleteFromCloudinary,
+    uploadOnCloudinary,
+} from "../utils/cloudinary.js";
 import fs from "fs";
 import { emitEvent } from "../utils/emitEvent.js";
 
@@ -59,7 +62,7 @@ const getMyChats = asyncHandler(async (req, res) => {
             return {
                 _id,
                 groupChat,
-                avatar: groupChat ? avatar.url : [otherMember.avatar.url],
+                avatar: groupChat ? avatar : [otherMember.avatar],
                 name: groupChat ? name : otherMember.name,
                 members: members.reduce((prev, curr) => {
                     if (curr._id.toString() !== req.user._id.toString()) {
@@ -86,22 +89,25 @@ const getMyGroups = asyncHandler(async (req, res) => {
         members: req.user._id,
         groupChat: true,
     }).populate("members", "name avatar");
-    const groups = chats.map(({ members, _id, groupChat, name, avatar }) => ({
-        _id,
-        groupChat,
-        name,
-        avatar: avatar.url,
-        members,
-    }));
+    const groups = chats.map(
+        ({ members, _id, groupChat, name, avatar, creator }) => ({
+            _id,
+            groupChat,
+            name,
+            avatar: avatar,
+            members,
+            creator,
+        })
+    );
     return res
         .status(200)
         .json(new ApiResponse(200, groups, "Group Retrieved sucessfully"));
 });
 
 const addMembers = asyncHandler(async (req, res) => {
-    const { chatId, members } = req.body;
-    if (!members || members.length < 1) {
-        throw new ApiError(400, "please provide members");
+    const { chatId, member } = req.body;
+    if (!member) {
+        throw new ApiError(400, "Please Select User!");
     }
     const chat = await Chat.findById(chatId);
     if (!chat) {
@@ -111,21 +117,23 @@ const addMembers = asyncHandler(async (req, res) => {
         throw new ApiError(404, "This is not a group Chat");
     }
     if (chat.creator.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You are not allowed to add the participants");
+        throw new CError(403, "You are not allowed to add the participants");
     }
 
-    const allNewMembersPromise = members.map((i) => User.findById(i, "name"));
-    const allNewMembers = await Promise.all(allNewMembersPromise);
-    const uniqueMembers = allNewMembers
-        .filter((i) => !chat.members.includes(i._id.toString()))
-        .map((i) => i._id);
+    // Check if Member is Present in Chat
+    if (chat.members.includes(member.toString())) {
+        throw new ApiError(400, "Member Already Present in Group");
+    }
 
-    chat.members.push(...uniqueMembers);
+    // Add New Member
+    chat.members.push(member);
+
     if (chat.members.length > 100) {
         throw new ApiError(400, "Group Members limit reached");
     }
     await chat.save();
-    const allUsersname = allNewMembers.map((i) => i.name).join(",");
+
+    // const allUsersname = allNewMembers.map((i) => i.name).join(",");
     // emitEvent(
     //     req,
     //     "ALERT",
@@ -136,14 +144,14 @@ const addMembers = asyncHandler(async (req, res) => {
     //   emitEvent(req, "REFETCH_CHATS", chat.members);
     return res
         .status(200)
-        .json(new ApiResponse(200, {}, "Members added sucessfully"));
+        .json(new ApiResponse(200, {}, "Member added sucessfully"));
 });
 
 const removeMembers = asyncHandler(async (req, res) => {
     const { userId, chatId } = req.body;
     const [chat, userThatWillBeRemoved] = await Promise.all([
         Chat.findById(chatId),
-        User.findById(userId, "name"),
+        User.findById(userId),
     ]);
     if (!chat) {
         throw new ApiError(404, "Chat not found");
@@ -157,9 +165,16 @@ const removeMembers = asyncHandler(async (req, res) => {
             "You are not allowed to remove the participants"
         );
     }
+    if (!userThatWillBeRemoved) {
+        throw new ApiError(404, "User not found");
+    }
     if (chat.members.length <= 3) {
         throw new ApiError(400, "Group must have atleast 3 members");
     }
+    if (!chat.members.includes(userId.toString())) {
+        throw new ApiError(404, "User Not in Group");
+    }
+
     chat.members = chat.members.filter(
         (member) => member.toString() !== userId.toString()
     );
@@ -172,11 +187,15 @@ const removeMembers = asyncHandler(async (req, res) => {
     //   emitEvent(req, REFETCH_CHATS, allChatMembers);
     return res
         .status(200)
-        .json(new ApiResponse(200, {}, "Members removed sucessfully"));
+        .json(new ApiResponse(200, {}, "Member removed sucessfully"));
 });
 
 const leaveGroup = asyncHandler(async (req, res) => {
     const chatId = req.params.id;
+    if (!chatId) {
+        throw new ApiError(404, "ChatId Required");
+    }
+
     const chat = await Chat.findById(chatId);
     if (!chat) {
         throw new ApiError(404, "Chat not found");
@@ -184,18 +203,22 @@ const leaveGroup = asyncHandler(async (req, res) => {
     if (!chat.groupChat) {
         throw new ApiError(404, "This is not a group Chat");
     }
+    if (!chat.members.includes(req.user._id.toString())) {
+        throw new ApiError(404, "User Not in Group");
+    }
+
     const remainingMembers = chat.members.filter(
-        (member) => member.toString() != req.user.toString()
+        (member) => member.toString() != req.user._id.toString()
     );
+
     if (chat.creator.toString() == req.user._id.toString()) {
         const newCreator = remainingMembers[0];
         chat.creator = newCreator;
     }
     chat.members = remainingMembers;
-    const [user] = await Promise.all([
-        User.findById(req.user, "name"),
-        chat.save(),
-    ]);
+    await chat.save();
+
+    // const [user] = await Promise.all([User.findById(req.user), chat.save()]);
     // emitEvent(req, ALERT, chat.members, {
     //     chatId,
     //     message: `User ${user.name} has left the group`,
@@ -288,7 +311,6 @@ const getMessages = asyncHandler(async (req, res) => {
 
 const renameGroup = asyncHandler(async (req, res) => {
     const chatId = req.params.id;
-    const pictureFilePath = req.file?.path;
     const { name } = req.body;
     const chat = await Chat.findById(chatId);
     if (!chat) throw new ApiError(404, "Chat not found");
@@ -296,18 +318,8 @@ const renameGroup = asyncHandler(async (req, res) => {
     if (chat.creator.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not allowed to rename the group");
     }
-    const pictureURL = await uploadOnCloudinary(pictureFilePath);
-    if (!pictureURL) {
-        throw new ApiError(500, "Avatar Failed To Upload On Cloudinary");
-    }
 
     chat.name = name;
-    // avatar: {
-    //     public_id: pictureURL.public_id,
-    //     url: pictureURL.url,
-    // },
-    // chat.avatar.public_id= pictureURL.public_id,
-
 
     await chat.save();
     return res
@@ -315,26 +327,47 @@ const renameGroup = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, "Group renamed sucessfully"));
 });
 
-const deleteChat = asyncHandler(async (req, res) => {
-    const chatId = req.params.id;
-    const chat = await Chat.findById(chatId);
-    if (!chat) throw new ApiError(404, "Chat not found");
-    if (chat.groupChat && chat.creator.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You are not allowed to delete the group");
-    }
-    if (chat.groupChat && chat.creator.toString() !== req.user._id.toString()) {
-        throw new ApiError(403, "You are not allowed to delete the group");
-    }
-    if (!chat.groupChat && !chat.members.includes(req.user._id.toString())) {
-        throw new ApiError(403, "You are not allowed to delete the group");
+const changeGroupPicture = asyncHandler(async (req, res) => {
+    const pictureFilePath = req.file?.path;
+    if (!pictureFilePath) {
+        throw new ApiError(400, "Picture Not Uploaded!");
     }
 
-    await Promise.all([chat.deleteOne(), Message.deleteMany({ chat: chatId })]);
-    return res.status(200).json({
-        success: true,
-        message: "Chat deleted successfully",
-    });
+    const chatId = req.params.id;
+    const chat = await Chat.findById(chatId);
+    if (!chat) {
+        fs.unlinkSync(pictureFilePath);
+        throw new ApiError(400, "Invalid Group");
+    }
+    if (!chat.groupChat) {
+        fs.unlinkSync(pictureFilePath);
+        throw new ApiError(404, "This is not a group chat");
+    }
+    if (chat.creator.toString() !== req.user._id.toString()) {
+        fs.unlinkSync(pictureFilePath);
+        throw new ApiError(403, "You are not allowed to change the group icon");
+    }
+    const pictureURL = await uploadOnCloudinary(pictureFilePath);
+    if (!pictureURL) {
+        throw new ApiError(500, "Picture Not Uploaded on Cloudinary");
+    }
+    const olderAvatar = { ...chat.avatar };
+
+    chat.avatar = {
+        public_id: pictureURL.public_id,
+        url: pictureURL.url,
+    };
+
+    await chat.save();
+
+    const deleteAvatar = await deleteFromCloudinary(olderAvatar.public_id);
+    if (!deleteAvatar) {
+        throw new ApiError(500, "Failed to Delete Older Profile Picture.");
+    }
+
+    return res.status(200).json(new ApiResponse(200, {}, "Picture Updated."));
 });
+
 
 export {
     newGroupChat,
@@ -345,6 +378,6 @@ export {
     renameGroup,
     leaveGroup,
     getChatDetails,
-    deleteChat,
     getMessages,
+    changeGroupPicture,
 };

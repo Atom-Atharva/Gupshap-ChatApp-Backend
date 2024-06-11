@@ -5,15 +5,28 @@ import { Chat } from "../models/chat.model.js";
 import { User } from "../models/user.model.js";
 import { Message } from "../models/message.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import fs from "fs";
+import { emitEvent } from "../utils/emitEvent.js";
 
-// TODO --> Cloudinary Avatar
 const newGroupChat = asyncHandler(async (req, res) => {
+    const pictureFilePath = req.file?.path;
+    if (!pictureFilePath) {
+        throw new ApiError(400, "Picture Not Uploaded");
+    }
+
     const { name, members } = req.body;
     if (!name) {
+        fs.unlinkSync(pictureFilePath);
         throw new ApiError(400, "Group Name is Required");
     }
     if (members.length < 2) {
+        fs.unlinkSync(pictureFilePath);
         throw new ApiError(400, "Group Chat must have atleast 3 members");
+    }
+
+    const pictureURL = await uploadOnCloudinary(pictureFilePath);
+    if (!pictureURL) {
+        throw new ApiError(500, "Avatar Failed To Upload On Cloudinary");
     }
 
     const allMembers = [...members, req.user._id];
@@ -22,36 +35,41 @@ const newGroupChat = asyncHandler(async (req, res) => {
         groupChat: true,
         creator: req.user,
         members: allMembers,
+        avatar: {
+            public_id: pictureURL.public_id,
+            url: pictureURL.url,
+        },
     });
+    // emitEvent(req, "ALERT", allMembers, `Welcome to ${name} group`);
+    // emitEvent(req, "REFETCH_CHATS", members);
     return res.status(201).json(new ApiResponse(201, {}, "Group Chat Created"));
 });
 
-// TODO --> Group Avatar
 const getMyChats = asyncHandler(async (req, res) => {
     const chats = await Chat.find({ members: req.user._id }).populate(
         "members",
         "name avatar"
     );
-    const transformedChats = chats.map(({ _id, name, members, groupChat }) => {
-        const otherMember = members.find(
-            (member) => member._id.toString() !== req.user._id.toString()
-        );
+    const transformedChats = chats.map(
+        ({ _id, name, members, groupChat, avatar }) => {
+            const otherMember = members.find(
+                (member) => member._id.toString() !== req.user._id.toString()
+            );
 
-        return {
-            _id,
-            groupChat,
-            avatar: groupChat
-                ? members.slice(0, 3).map(({ avatar }) => avatar.url)
-                : [otherMember.avatar.url],
-            name: groupChat ? name : otherMember.name,
-            members: members.reduce((prev, curr) => {
-                if (curr._id.toString() !== req.user._id.toString()) {
-                    prev.push(curr._id);
-                }
-                return prev;
-            }, []),
-        };
-    });
+            return {
+                _id,
+                groupChat,
+                avatar: groupChat ? avatar.url : [otherMember.avatar.url],
+                name: groupChat ? name : otherMember.name,
+                members: members.reduce((prev, curr) => {
+                    if (curr._id.toString() !== req.user._id.toString()) {
+                        prev.push(curr._id);
+                    }
+                    return prev;
+                }, []),
+            };
+        }
+    );
     return res
         .status(200)
         .json(
@@ -63,17 +81,17 @@ const getMyChats = asyncHandler(async (req, res) => {
         );
 });
 
-// TODO --> Get Group Avatar
 const getMyGroups = asyncHandler(async (req, res) => {
     const chats = await Chat.find({
         members: req.user._id,
         groupChat: true,
     }).populate("members", "name avatar");
-    const groups = chats.map(({ members, _id, groupChat, name }) => ({
+    const groups = chats.map(({ members, _id, groupChat, name, avatar }) => ({
         _id,
         groupChat,
         name,
-        avatar: members.slice(0, 3).map(({ avatar }) => avatar.url),
+        avatar: avatar.url,
+        members,
     }));
     return res
         .status(200)
@@ -108,6 +126,14 @@ const addMembers = asyncHandler(async (req, res) => {
     }
     await chat.save();
     const allUsersname = allNewMembers.map((i) => i.name).join(",");
+    // emitEvent(
+    //     req,
+    //     "ALERT",
+    //     chat.members,
+    //     `${allUsersName} has been added in the group`
+    //   );
+
+    //   emitEvent(req, "REFETCH_CHATS", chat.members);
     return res
         .status(200)
         .json(new ApiResponse(200, {}, "Members added sucessfully"));
@@ -138,6 +164,12 @@ const removeMembers = asyncHandler(async (req, res) => {
         (member) => member.toString() !== userId.toString()
     );
     await chat.save();
+    // emitEvent(req, ALERT, chat.members, {
+    //     message: `${userThatWillBeRemoved.name} has been removed from the group`,
+    //     chatId,
+    //   });
+
+    //   emitEvent(req, REFETCH_CHATS, allChatMembers);
     return res
         .status(200)
         .json(new ApiResponse(200, {}, "Members removed sucessfully"));
@@ -164,7 +196,13 @@ const leaveGroup = asyncHandler(async (req, res) => {
         User.findById(req.user, "name"),
         chat.save(),
     ]);
-    await chat.save();
+    // emitEvent(req, ALERT, chat.members, {
+    //     chatId,
+    //     message: `User ${user.name} has left the group`,
+    //   });
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Group left sucessfully"));
 });
 
 // const sendAttachments = asyncHandler(async (req, res) => {
@@ -250,6 +288,7 @@ const getMessages = asyncHandler(async (req, res) => {
 
 const renameGroup = asyncHandler(async (req, res) => {
     const chatId = req.params.id;
+    const pictureFilePath = req.file?.path;
     const { name } = req.body;
     const chat = await Chat.findById(chatId);
     if (!chat) throw new ApiError(404, "Chat not found");
@@ -257,7 +296,19 @@ const renameGroup = asyncHandler(async (req, res) => {
     if (chat.creator.toString() !== req.user._id.toString()) {
         throw new ApiError(403, "You are not allowed to rename the group");
     }
+    const pictureURL = await uploadOnCloudinary(pictureFilePath);
+    if (!pictureURL) {
+        throw new ApiError(500, "Avatar Failed To Upload On Cloudinary");
+    }
+
     chat.name = name;
+    // avatar: {
+    //     public_id: pictureURL.public_id,
+    //     url: pictureURL.url,
+    // },
+    // chat.avatar.public_id= pictureURL.public_id,
+
+
     await chat.save();
     return res
         .status(200)
@@ -291,5 +342,9 @@ export {
     getMyGroups,
     addMembers,
     removeMembers,
+    renameGroup,
     leaveGroup,
+    getChatDetails,
+    deleteChat,
+    getMessages,
 };

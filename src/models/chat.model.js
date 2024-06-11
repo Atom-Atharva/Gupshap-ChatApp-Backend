@@ -15,6 +15,14 @@ const chatSchema = new Schema(
             type: Boolean,
             default: false,
         },
+        avatar: {
+            public_id: {
+                type: String,
+            },
+            url: {
+                type: String,
+            },
+        },
         members: [
             {
                 type: mongoose.Schema.Types.ObjectId,

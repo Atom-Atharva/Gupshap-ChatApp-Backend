@@ -7,11 +7,9 @@ const messageSchema = new Schema(
             {
                 public_id: {
                     type: String,
-                    required: true,
                 },
                 url: {
                     type: String,
-                    required: true,
                 },
             },
         ],

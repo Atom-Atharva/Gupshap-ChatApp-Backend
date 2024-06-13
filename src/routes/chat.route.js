@@ -8,10 +8,10 @@ import {
     removeMembers,
     leaveGroup,
     getMessages,
-    
     getChatDetails,
     renameGroup,
     changeGroupPicture,
+    sendAttachments,
 } from "../controllers/chat.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 
@@ -26,13 +26,13 @@ router.route("/my-chat/groups").get(verifyJWT, getMyGroups);
 router.route("/add-members").put(verifyJWT, addMembers);
 router.route("/remove-member").put(verifyJWT, removeMembers);
 router.route("/leave-group/:id").delete(verifyJWT, leaveGroup);
-router.route("/message/:id").get(verifyJWT, getMessages);
 router
-    .route("/changeGroupPicture/:id")
-    .put(verifyJWT, upload.single("avatar"), changeGroupPicture);
+.route("/changeGroupPicture/:id")
+.put(verifyJWT, upload.single("avatar"), changeGroupPicture);
 router.route("/renameGroup/:id").put(verifyJWT, renameGroup);
-// router""
-//     .route("/:id")
-//     .get(verifyJWT, getChatDetails)
-//     .put(verifyJWT, renameGroup)
+router
+.route("/send-attachment")
+.post(verifyJWT, upload.array("files", 5), sendAttachments);
+router.route("/get-message/:id").get(verifyJWT, getChatDetails);
+router.route("/message/:id").get(verifyJWT, getMessages);
 export default router;

@@ -43,8 +43,10 @@ const newGroupChat = asyncHandler(async (req, res) => {
             url: pictureURL.url,
         },
     });
-    // emitEvent(req, "ALERT", allMembers, `Welcome to ${name} group`);
-    // emitEvent(req, "REFETCH_CHATS", members);
+
+    emitEvent(req, "ALERT", allMembers, `Welcome to ${name}`);
+    emitEvent(req, "REFETCH_CHATS", members);
+
     return res.status(201).json(new ApiResponse(201, {}, "Group Chat Created"));
 });
 
@@ -133,15 +135,16 @@ const addMembers = asyncHandler(async (req, res) => {
     }
     await chat.save();
 
-    // const allUsersname = allNewMembers.map((i) => i.name).join(",");
-    // emitEvent(
-    //     req,
-    //     "ALERT",
-    //     chat.members,
-    //     `${allUsersName} has been added in the group`
-    //   );
+    const allUsersname = allNewMembers.map((i) => i.name).join(",");
+    emitEvent(
+        req,
+        "ALERT",
+        chat.members,
+        `${allUsersname} has been added in the group`
+    );
 
-    //   emitEvent(req, "REFETCH_CHATS", chat.members);
+    emitEvent(req, "REFETCH_CHATS", chat.members);
+
     return res
         .status(200)
         .json(new ApiResponse(200, {}, "Member added sucessfully"));
@@ -179,12 +182,14 @@ const removeMembers = asyncHandler(async (req, res) => {
         (member) => member.toString() !== userId.toString()
     );
     await chat.save();
-    // emitEvent(req, ALERT, chat.members, {
-    //     message: `${userThatWillBeRemoved.name} has been removed from the group`,
-    //     chatId,
-    //   });
 
-    //   emitEvent(req, REFETCH_CHATS, allChatMembers);
+    emitEvent(req, ALERT, chat.members, {
+        message: `${userThatWillBeRemoved.name} has been removed from the group`,
+        chatId,
+    });
+
+    emitEvent(req, REFETCH_CHATS, allChatMembers);
+
     return res
         .status(200)
         .json(new ApiResponse(200, {}, "Member removed sucessfully"));
@@ -218,50 +223,57 @@ const leaveGroup = asyncHandler(async (req, res) => {
     chat.members = remainingMembers;
     await chat.save();
 
-    // const [user] = await Promise.all([User.findById(req.user), chat.save()]);
-    // emitEvent(req, ALERT, chat.members, {
-    //     chatId,
-    //     message: `User ${user.name} has left the group`,
-    //   });
+    const [user] = await Promise.all([User.findById(req.user), chat.save()]);
+    emitEvent(req, ALERT, chat.members, {
+        chatId,
+        message: `User ${user.name} has left the group`,
+    });
+
     return res
         .status(200)
         .json(new ApiResponse(200, {}, "Group left sucessfully"));
 });
 
-// const sendAttachments = asyncHandler(async (req, res) => {
-//     const { chatId } = req.body;
+const sendAttachments = asyncHandler(async (req, res) => {
+    const { chatId } = req.body;
 
-//     const files = req.files || [];
+    const files = req.files || [];
 
-//     if (files.length < 1) throw new ApiError(400, "please upload attachments");
+    if (files.length < 1) throw new ApiError(400, "Please Upload Attachments");
 
-//     if (files.length > 5)
-//         throw new ApiError(400, "files cant be greater than 5 file");
+    if (files.length > 5) throw new ApiError(400, "Not More Than 5 Files");
 
-//     const [chat, me] = await Promise.all([
-//         Chat.findById(chatId),
-//         User.findById(req.user._id, "name"),
-//     ]);
+    const chat = await Chat.findById(chatId);
 
-//     if (!chat) throw new ApiError(404, "Chat not found");
+    if (!chat) throw new ApiError(404, "Chat not found");
 
-//     //   Upload files here
-//     // const attachments = await uploadOnCloudinary(files);
+    // Upload files here
+    const attachmentsPromises = files.map(async (filePath) => {
+        try {
+            return await uploadOnCloudinary(filePath);
+        } catch (error) {
+            throw new ApiError(500, `Couldn't upload A File! ${error}`);
+        }
+    });
+    
+    const uploadedFiles = await Promise.all(attachmentsPromises);
+    if (!uploadedFiles) {
+        throw new ApiError(500, `Couldn't upload Files! ${error}`);
+    }
+    const messageForDB = {
+        content: "",
+        attachments: uploadedFiles,
+        sender: req.user._id,
+        chat: chatId,
+    };
 
-//     const messageForDB = {
-//         content: "",
-//         attachments,
-//         sender: me._id,
-//         chat: chatId,
-//     };
+    const message = await Message.create(messageForDB);
+    if (!message) throw new ApiError(500, "Failed to Store Attachment(s)");
 
-//     const message = await Message.create(messageForDB);
-
-//     return res.status(200).json({
-//         success: true,
-//         message,
-//     });
-// });
+    return res
+        .status(200)
+        .json(new ApiResponse(200, message, "Message Send Successfully"));
+});
 
 const getChatDetails = asyncHandler(async (req, res) => {
     if (req.query.populate === "true") {
@@ -368,7 +380,6 @@ const changeGroupPicture = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, {}, "Picture Updated."));
 });
 
-
 export {
     newGroupChat,
     getMyChats,
@@ -380,4 +391,5 @@ export {
     getChatDetails,
     getMessages,
     changeGroupPicture,
+    sendAttachments,
 };

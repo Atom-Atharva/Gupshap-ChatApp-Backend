@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import { app } from "./app.js";
 import dbConnect from "./db/index.js";
+import { server } from "./server.js";
 
 const PORT = process.env.PORT;
 
@@ -11,9 +12,9 @@ dbConnect()
             throw error;
         });
 
-        app.listen(PORT || 8080, (err) => {
+        server.listen(PORT || 8080, (err) => {
             if (err) throw err;
-            console.log(`Listening on http//:localhost:${PORT}`);
+            console.log(`Listening on http://localhost:${PORT}`);
         });
     })
     .catch((error) => {

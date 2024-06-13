@@ -31,8 +31,8 @@ router
 .put(verifyJWT, upload.single("avatar"), changeGroupPicture);
 router.route("/renameGroup/:id").put(verifyJWT, renameGroup);
 router
-.route("/send-attachment")
+.route("/send-attachments")
 .post(verifyJWT, upload.array("files", 5), sendAttachments);
-router.route("/get-message/:id").get(verifyJWT, getChatDetails);
-router.route("/message/:id").get(verifyJWT, getMessages);
+router.route("/get-chat-details/:id").get(verifyJWT, getChatDetails);
+router.route("/get-message/:id").get(verifyJWT, getMessages);
 export default router;

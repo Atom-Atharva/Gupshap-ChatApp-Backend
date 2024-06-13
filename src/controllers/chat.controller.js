@@ -27,7 +27,7 @@ const newGroupChat = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Group Chat must have atleast 3 members");
     }
 
-    const pictureURL = await uploadOnCloudinary(pictureFilePath);
+    const pictureURL = await uploadOnCloudinary(pictureFilePath, "group");
     if (!pictureURL) {
         throw new ApiError(500, "Avatar Failed To Upload On Cloudinary");
     }
@@ -44,8 +44,8 @@ const newGroupChat = asyncHandler(async (req, res) => {
         },
     });
 
-    emitEvent(req, "ALERT", allMembers, `Welcome to ${name}`);
-    emitEvent(req, "REFETCH_CHATS", members);
+    // emitEvent(req, "ALERT", allMembers, `Welcome to ${name}`);
+    // emitEvent(req, "REFETCH_CHATS", members);
 
     return res.status(201).json(new ApiResponse(201, {}, "Group Chat Created"));
 });
@@ -136,14 +136,14 @@ const addMembers = asyncHandler(async (req, res) => {
     await chat.save();
 
     const allUsersname = allNewMembers.map((i) => i.name).join(",");
-    emitEvent(
-        req,
-        "ALERT",
-        chat.members,
-        `${allUsersname} has been added in the group`
-    );
+    // emitEvent(
+    //     req,
+    //     "ALERT",
+    //     chat.members,
+    //     `${allUsersname} has been added in the group`
+    // );
 
-    emitEvent(req, "REFETCH_CHATS", chat.members);
+    // emitEvent(req, "REFETCH_CHATS", chat.members);
 
     return res
         .status(200)
@@ -238,28 +238,34 @@ const sendAttachments = asyncHandler(async (req, res) => {
     const { chatId } = req.body;
 
     const files = req.files || [];
-
-    if (files.length < 1) throw new ApiError(400, "Please Upload Attachments");
-
-    if (files.length > 5) throw new ApiError(400, "Not More Than 5 Files");
+    if (!files) {
+        throw new ApiError(400, "Please Upload Attachments");
+    }
+    const filesPaths = files.map((file) => file.path);
 
     const chat = await Chat.findById(chatId);
 
-    if (!chat) throw new ApiError(404, "Chat not found");
+    if (!chat) {
+        filesPaths.map((file) => {
+            fs.unlinkSync(file);
+        });
+        throw new ApiError(404, "Chat not found");
+    }
 
     // Upload files here
-    const attachmentsPromises = files.map(async (filePath) => {
+    const attachmentsPromises = filesPaths.map(async (filePath) => {
         try {
-            return await uploadOnCloudinary(filePath);
+            return await uploadOnCloudinary(filePath, "attachments");
         } catch (error) {
             throw new ApiError(500, `Couldn't upload A File! ${error}`);
         }
     });
-    
+
     const uploadedFiles = await Promise.all(attachmentsPromises);
     if (!uploadedFiles) {
         throw new ApiError(500, `Couldn't upload Files! ${error}`);
     }
+
     const messageForDB = {
         content: "",
         attachments: uploadedFiles,
@@ -272,29 +278,21 @@ const sendAttachments = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(new ApiResponse(200, message, "Message Send Successfully"));
+        .json(new ApiResponse(200, {}, "Message Send Successfully"));
 });
 
 const getChatDetails = asyncHandler(async (req, res) => {
-    if (req.query.populate === "true") {
-        const chat = await Chat.findById(req.param.id)
-            .populate("members", "name avatar")
-            .lean();
-        if (!chat) {
-            throw new ApiError(404, "Chat not found");
-        }
-        chat.members = chat.members.map(({ _id, name, avatar }) => ({
-            _id,
-            name,
-            avatar: avatar.url,
-        }));
-        return res.status(200).json(new ApiResponse(200, chat, ""));
-    } else {
-        const chat = await Chat.findById(req.param.id);
-        if (!chat) throw new ApiError(404, "Chat not found");
-
-        return res.status(200).json(new ApiResponse(200, chat, ""));
+    const chat = await Chat.findById(req.params.id).populate(
+        "members",
+        "name avatar"
+    );
+    if (!chat) {
+        throw new ApiError(404, "Chat not found");
     }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, chat, "Chat Details Fetched!"));
 });
 
 const getMessages = asyncHandler(async (req, res) => {
@@ -304,21 +302,20 @@ const getMessages = asyncHandler(async (req, res) => {
 
     const skip = (page - 1) * resultPerPage;
     const [messages, totalMessagesCount] = await Promise.all([
-        Message.find({ chat: chatId })
+        await Message.find({ chat: chatId })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(resultPerPage)
             .populate("sender", "name")
             .lean(),
-        Message.countDocuments({ chat: chatId }),
+        await Message.countDocuments({ chat: chatId }),
     ]);
+
     const totalPages = Math.ceil(totalMessagesCount / resultPerPage) || 0;
 
-    return res.status(200).json({
-        success: true,
-        messages: messages.reverse(),
-        totalPages,
-    });
+    const data = { messages: messages.reverse(), totalPages: totalPages };
+
+    return res.status(200).json(new ApiResponse(200, data, "Messages Fetched"));
 });
 
 const renameGroup = asyncHandler(async (req, res) => {
@@ -359,7 +356,7 @@ const changeGroupPicture = asyncHandler(async (req, res) => {
         fs.unlinkSync(pictureFilePath);
         throw new ApiError(403, "You are not allowed to change the group icon");
     }
-    const pictureURL = await uploadOnCloudinary(pictureFilePath);
+    const pictureURL = await uploadOnCloudinary(pictureFilePath, "group");
     if (!pictureURL) {
         throw new ApiError(500, "Picture Not Uploaded on Cloudinary");
     }

@@ -12,6 +12,7 @@ import { Request } from "../models/request.model.js";
 const registerUser = asyncHandler(async (req, res) => {
     // Take Avatar
     const avatarFilePath = req.file?.path;
+    console.log(req.file);
 
     // Check if Present
     if (!avatarFilePath) {
@@ -48,7 +49,7 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     // Upload On Cloudinary
-    const avatar = await uploadOnCloudinary(avatarFilePath);
+    const avatar = await uploadOnCloudinary(avatarFilePath, "profile");
     if (!avatar) {
         throw new ApiError(400, "Avatar File is Required");
     }

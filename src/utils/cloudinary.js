@@ -9,14 +9,14 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadOnCloudinary = async (localFilePath) => {
+const uploadOnCloudinary = async (localFilePath, subfolder) => {
     try {
         if (!localFilePath) {
             return null;
         }
-        
+
         const response = await cloudinary.uploader.upload(localFilePath, {
-            folder: "ChatApp",
+            folder: `ChatApp/${subfolder}`,
             resource_type: "auto",
         });
 

@@ -572,7 +572,7 @@ Authorization: Bearer <JWT Token>
 
 ```json
 {
-    "files": An array of files (up to 5)
+    "files": "An array of files (up to 5)"
 }
 ```
 

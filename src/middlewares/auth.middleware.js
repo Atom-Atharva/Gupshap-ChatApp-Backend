@@ -23,7 +23,10 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
         req.user = user;
         next();
     } catch (error) {
-        throw new ApiError(500, `Error While Verifying Token: ${error}`);
+        throw new ApiError(
+            error.statusCode || 500,
+            `Error While Verifying Token: ${error}`
+        );
     }
 });
 

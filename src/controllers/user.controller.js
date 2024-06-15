@@ -12,7 +12,7 @@ import { Request } from "../models/request.model.js";
 const registerUser = asyncHandler(async (req, res) => {
     // Take Avatar
     const avatarFilePath = req.file?.path;
-    console.log(req.file);
+    // console.log(req.file);
 
     // Check if Present
     if (!avatarFilePath) {

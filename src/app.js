@@ -29,4 +29,9 @@ app.use("/api/v1/users", userRouter);
 import chatRouter from "./routes/chat.route.js";
 app.use("/api/v1/chat", chatRouter);
 
+import ErrorHandler from "./utils/ErrorHandler.js";
+
+// Error handling middleware
+app.use(ErrorHandler);
+
 export { app };

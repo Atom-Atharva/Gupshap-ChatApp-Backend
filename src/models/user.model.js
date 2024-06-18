@@ -15,7 +15,9 @@ const userSchema = new Schema(
         },
         password: {
             type: String,
-            required: true,
+            required: function () {
+                return !this.isOauth2User;
+            },
         },
         avatar: {
             public_id: {
@@ -29,6 +31,10 @@ const userSchema = new Schema(
         },
         refreshToken: {
             type: String,
+        },
+        isOauth2User: {
+            type: Boolean,
+            default: false,
         },
     },
     {

@@ -51,12 +51,13 @@ const newGroupChat = asyncHandler(async (req, res) => {
 });
 
 const getMyChats = asyncHandler(async (req, res) => {
-    const chats = await Chat.find({ members: req.user._id }).populate(
-        "members",
-        "name avatar"
-    );
+    const chats = await Chat.find({
+        members: req.user._id,
+    })
+        .populate("members", "name avatar")
+        .populate("creator", "name");
     const transformedChats = chats.map(
-        ({ _id, name, members, groupChat, avatar }) => {
+        ({ _id, name, members, groupChat, avatar, creator }) => {
             const otherMember = members.find(
                 (member) => member._id.toString() !== req.user._id.toString()
             );
@@ -64,14 +65,17 @@ const getMyChats = asyncHandler(async (req, res) => {
             return {
                 _id,
                 groupChat,
-                avatar: groupChat ? avatar : [otherMember.avatar],
+                avatar: groupChat ? avatar : otherMember.avatar,
                 name: groupChat ? name : otherMember.name,
-                members: members.reduce((prev, curr) => {
-                    if (curr._id.toString() !== req.user._id.toString()) {
-                        prev.push(curr._id);
-                    }
-                    return prev;
-                }, []),
+                members: groupChat
+                    ? members
+                    : members.reduce((prev, curr) => {
+                          if (curr._id.toString() !== req.user._id.toString()) {
+                              prev.push(curr);
+                          }
+                          return prev;
+                      }, []),
+                creator,
             };
         }
     );
@@ -90,7 +94,9 @@ const getMyGroups = asyncHandler(async (req, res) => {
     const chats = await Chat.find({
         members: req.user._id,
         groupChat: true,
-    }).populate("members", "name avatar");
+    })
+        .populate("members", "name avatar")
+        .populate("creator", "name");
     const groups = chats.map(
         ({ members, _id, groupChat, name, avatar, creator }) => ({
             _id,
@@ -119,7 +125,7 @@ const addMembers = asyncHandler(async (req, res) => {
         throw new ApiError(404, "This is not a group Chat");
     }
     if (chat.creator.toString() !== req.user._id.toString()) {
-        throw new CError(403, "You are not allowed to add the participants");
+        throw new ApiError(403, "You are not allowed to add the participants");
     }
 
     // Check if Member is Present in Chat

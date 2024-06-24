@@ -318,7 +318,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 const getAllUser = asyncHandler(async (req, res) => {
     const users = await User.find({ _id: { $ne: req.user._id } }).select(
-        "-password -refreshToken"
+        "-password -refreshToken -isOauth2User"
     );
     if (!users) {
         throw new ApiError("400", "Error Finding Users!");
@@ -355,7 +355,7 @@ const getMyFriends = asyncHandler(async (req, res) => {
             });
 
             const friendUser = await User.findById({ _id: friend._id }).select(
-                "-password -refreshToken"
+                "-password -refreshToken -isOauth2User"
             );
             if (!friendUser) {
                 throw new ApiError(500, "Friend User ID Not Found!");

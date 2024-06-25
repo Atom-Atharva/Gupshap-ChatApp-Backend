@@ -33,7 +33,7 @@ const newGroupChat = asyncHandler(async (req, res) => {
     }
 
     const allMembers = [...members, req.user._id];
-    await Chat.create({
+    const group = await Chat.create({
         name,
         groupChat: true,
         creator: req.user,
@@ -43,11 +43,22 @@ const newGroupChat = asyncHandler(async (req, res) => {
             url: pictureURL.url,
         },
     });
+    if (!group) {
+        throw new ApiError(500, "Couldn't Create Group in DB!");
+    }
+
+    // console.log(group);
+
+    const chatDetail = await Chat.findById(group._id)
+        .populate("members", "name avatar")
+        .populate("creator", "name avatar");
 
     // emitEvent(req, "ALERT", allMembers, `Welcome to ${name}`);
     // emitEvent(req, "REFETCH_CHATS", members);
 
-    return res.status(201).json(new ApiResponse(201, {}, "Group Chat Created"));
+    return res
+        .status(201)
+        .json(new ApiResponse(201, chatDetail, "Group Chat Created"));
 });
 
 const getMyChats = asyncHandler(async (req, res) => {
@@ -288,10 +299,9 @@ const sendAttachments = asyncHandler(async (req, res) => {
 });
 
 const getChatDetails = asyncHandler(async (req, res) => {
-    const chat = await Chat.findById(req.params.id).populate(
-        "members",
-        "name avatar"
-    );
+    const chat = await Chat.findById(req.params.id)
+        .populate("members", "name avatar")
+        .populate("creator", "name avatar");
     if (!chat) {
         throw new ApiError(404, "Chat not found");
     }

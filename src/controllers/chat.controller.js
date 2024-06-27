@@ -68,7 +68,7 @@ const getMyChats = asyncHandler(async (req, res) => {
         .populate("members", "name avatar")
         .populate("creator", "name");
     const transformedChats = chats.map(
-        ({ _id, name, members, groupChat, avatar, creator }) => {
+        ({ _id, name, members, groupChat, avatar, creator, updatedAt }) => {
             const otherMember = members.find(
                 (member) => member._id.toString() !== req.user._id.toString()
             );
@@ -87,6 +87,7 @@ const getMyChats = asyncHandler(async (req, res) => {
                           return prev;
                       }, []),
                 creator,
+                updatedAt,
             };
         }
     );
@@ -109,13 +110,14 @@ const getMyGroups = asyncHandler(async (req, res) => {
         .populate("members", "name avatar")
         .populate("creator", "name");
     const groups = chats.map(
-        ({ members, _id, groupChat, name, avatar, creator }) => ({
+        ({ members, _id, groupChat, name, avatar, creator, updatedAt }) => ({
             _id,
             groupChat,
             name,
             avatar: avatar,
             members,
             creator,
+            updatedAt,
         })
     );
     return res
@@ -200,12 +202,12 @@ const removeMembers = asyncHandler(async (req, res) => {
     );
     await chat.save();
 
-    emitEvent(req, ALERT, chat.members, {
-        message: `${userThatWillBeRemoved.name} has been removed from the group`,
-        chatId,
-    });
+    // emitEvent(req, ALERT, chat.members, {
+    //     message: `${userThatWillBeRemoved.name} has been removed from the group`,
+    //     chatId,
+    // });
 
-    emitEvent(req, REFETCH_CHATS, allChatMembers);
+    // emitEvent(req, REFETCH_CHATS, allChatMembers);
 
     return res
         .status(200)
@@ -241,10 +243,10 @@ const leaveGroup = asyncHandler(async (req, res) => {
     await chat.save();
 
     const [user] = await Promise.all([User.findById(req.user), chat.save()]);
-    emitEvent(req, ALERT, chat.members, {
-        chatId,
-        message: `User ${user.name} has left the group`,
-    });
+    // emitEvent(req, ALERT, chat.members, {
+    //     chatId,
+    //     message: `User ${user.name} has left the group`,
+    // });
 
     return res
         .status(200)

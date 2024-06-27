@@ -154,7 +154,7 @@ const addMembers = asyncHandler(async (req, res) => {
     }
     await chat.save();
 
-    const allUsersname = allNewMembers.map((i) => i.name).join(",");
+    // const allUsersname = allNewMembers.map((i) => i.name).join(",");
     // emitEvent(
     //     req,
     //     "ALERT",

@@ -36,20 +36,31 @@ export const verifyJWTSocket = async (socket, next) => {
         const token = cookies?.accessToken || null;
 
         if (!token) {
-            throw new ApiError(400, "Unauthorized Token");
+            console.error("Token not found in cookies.");
+            return next(new ApiError(400, "Unauthorized Token"));
         }
 
-        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-        const user = await User.findById(decodedToken?._id).select(
-            "-password -refreshToken"
-        );
-        if (!user) {
-            throw new ApiError(400, "Invalid Access Token");
-        }
+        try {
+            const decodedToken = jwt.verify(
+                token,
+                process.env.ACCESS_TOKEN_SECRET
+            );
+            const user = await User.findById(decodedToken?._id).select(
+                "-password -refreshToken"
+            );
+            if (!user) {
+                console.error("User not found with the given token.");
+                return next(new ApiError(400, "Invalid Access Token"));
+            }
 
-        socket.user = user;
-        next();
+            socket.user = user;
+            next();
+        } catch (tokenError) {
+            console.error("Token verification failed:", tokenError);
+            return next(new ApiError(401, "Invalid Token"));
+        }
     } catch (error) {
-        throw new ApiError(500, `Error While Verifying Token: ${error}`);
+        console.error("Error while verifying token:", error);
+        next(new ApiError(500, `Error While Verifying Token: ${error}`));
     }
 };

@@ -11,9 +11,14 @@ import { Chat } from "./models/chat.model.js";
 const server = createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.CORS_ORIGIN_DEVELOPMENT,
+        origin: process.env.CORS_ORIGIN,
         credentials: true,
     },
+    // FOR DEVELOPMENT USE
+    // cors: {
+    //     origin: process.env.CORS_ORIGIN_DEVELOPMENT,
+    //     credentials: true,
+    // },
 });
 const userSocketIDs = new Map();
 

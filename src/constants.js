@@ -4,6 +4,7 @@ export const DB_NAME = "Gupshap";
 export const options = {
     httpOnly: true,
     secure: true,
+    sameSite: "None",
 };
 
 export const CONNECTION = "connection";

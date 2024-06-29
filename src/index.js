@@ -14,7 +14,7 @@ dbConnect()
 
         server.listen(PORT || 8080, (err) => {
             if (err) throw err;
-            console.log(`Listening on http://localhost:${PORT}`);
+            console.log(`Listening on http://localhost:${PORT} or backend url`);
         });
     })
     .catch((error) => {

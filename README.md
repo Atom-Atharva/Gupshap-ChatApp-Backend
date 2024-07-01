@@ -9,8 +9,9 @@ Welcome to Gupshap Backend Repository! This repository is designed to provide an
 3. [Project Directory](#project-directory)
 4. [Set UP Project](#set-up-project)
 5. [APIs](#apis)
-6. [Support Us](#give-us-a-hand)
-7. [Licence](#licence)
+6. [Sockets](#socket)
+7. [Support Us](#give-us-a-hand)
+8. [Licence](#licence)
 
 ## Project Highlights
 
@@ -198,14 +199,10 @@ This includes apis related to user and its relations
 
 USE ENDPOINT LIKE THIS : `backend_url/api/v1/users/api_end_point`
 
-### **Register**
+#### **Register**
 
----
-
-**Endpoint:** `/api/auth/register`
-
-**Method:** POST
-
+**Endpoint:** `/register`  
+**Method:** POST  
 **Description:** Registers a new user.
 
 **Request Body:**
@@ -221,14 +218,10 @@ USE ENDPOINT LIKE THIS : `backend_url/api/v1/users/api_end_point`
 
 _Note: The avatar file should be sent as a multipart/form-data._
 
-### **Login**
+#### **Login**
 
----
-
-**Endpoint:** `/api/auth/login`
-
-**Method:** POST
-
+**Endpoint:** `/login`  
+**Method:** POST  
 **Description:** Authenticates a user.
 
 **Request Body:**
@@ -240,14 +233,10 @@ _Note: The avatar file should be sent as a multipart/form-data._
 }
 ```
 
-### **Logout**
+#### **Logout**
 
----
-
-**Endpoint:** `/api/auth/logout`
-
-**Method:** POST
-
+**Endpoint:** `/logout`  
+**Method:** POST  
 **Description:** Logs out the authenticated user.
 
 **Headers:**
@@ -256,14 +245,10 @@ _Note: The avatar file should be sent as a multipart/form-data._
 Authorization: Bearer <JWT Token>
 ```
 
-### **Get All Users**
+#### **Get All Users**
 
----
-
-**Endpoint:** `/api/auth/getAllUser`
-
-**Method:** GET
-
+**Endpoint:** `/getAllUser`  
+**Method:** GET  
 **Description:** Retrieves a list of all users.
 
 **Headers:**
@@ -272,14 +257,10 @@ Authorization: Bearer <JWT Token>
 Authorization: Bearer <JWT Token>
 ```
 
-### **Get My Profile**
+#### **Get My Profile**
 
----
-
-**Endpoint:** `/api/auth/getMyProfile`
-
-**Method:** GET
-
+**Endpoint:** `/getMyProfile`  
+**Method:** GET  
 **Description:** Retrieves the profile of the authenticated user.
 
 **Headers:**
@@ -288,14 +269,10 @@ Authorization: Bearer <JWT Token>
 Authorization: Bearer <JWT Token>
 ```
 
-### **Get My Friends**
+#### **Get My Friends**
 
---
-
-**Endpoint:** `/api/auth/getMyFriends`
-
-**Method:** GET
-
+**Endpoint:** `/getMyFriends`  
+**Method:** GET  
 **Description:** Retrieves the friend list of the authenticated user.
 
 **Headers:**
@@ -304,14 +281,10 @@ Authorization: Bearer <JWT Token>
 Authorization: Bearer <JWT Token>
 ```
 
-### **Get My Notifications**
+#### **Get My Notifications**
 
----
-
-**Endpoint:** `/api/auth/getMyNotifications`
-
-**Method:** GET
-
+**Endpoint:** `/getMyNotifications`  
+**Method:** GET  
 **Description:** Retrieves the notifications for the authenticated user.
 
 **Headers:**
@@ -320,14 +293,10 @@ Authorization: Bearer <JWT Token>
 Authorization: Bearer <JWT Token>
 ```
 
-### **Send Friend Reques**t
+#### **Send Friend Request**
 
----
-
-**Endpoint:** `/api/auth/sendFriendRequest`
-
-**Method:** POST
-
+**Endpoint:** `/sendFriendRequest`  
+**Method:** POST  
 **Description:** Sends a friend request to another user.
 
 **Headers:**
@@ -344,14 +313,10 @@ Authorization: Bearer <JWT Token>
 }
 ```
 
-### **Accept Friend Request**
+#### **Accept Friend Request**
 
----
-
-**Endpoint:** `/api/auth/acceptFriendRequest`
-
-**Method:** POST
-
+**Endpoint:** `/acceptFriendRequest`  
+**Method:** POST  
 **Description:** Accepts a friend request from another user.
 
 **Headers:**
@@ -370,6 +335,36 @@ Authorization: Bearer <JWT Token>
 }
 ```
 
+### **Third-Party Authentication**
+
+#### **Google Authentication**
+
+**Endpoint:** `/auth/google`  
+**Method:** POST  
+**Description:** Authenticates a user via Google OAuth2.
+
+**Request Body:**
+
+```json
+{
+    "code": "authorizationCode"
+}
+```
+
+#### **GitHub Authentication**
+
+**Endpoint:** `/auth/github`  
+**Method:** POST  
+**Description:** Authenticates a user via GitHub OAuth2.
+
+**Request Body:**
+
+```json
+{
+    "code": "authorizationCode"
+}
+```
+
 ---
 
 ---
@@ -384,7 +379,7 @@ USE ENDPOINT LIKE THIS : `backend_url/api/v1/chat/api_end_point`
 
 ---
 
-**Endpoint:** `/api/chat/new-group`
+**Endpoint:** `/new-group`
 
 **Method:** `POST`
 
@@ -410,7 +405,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/my-chat`
+**Endpoint:** `/my-chat`
 
 **Method:** `GET`
 
@@ -426,7 +421,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/my-chat/groups`
+**Endpoint:** `/my-chat/groups`
 
 **Method:** `GET`
 
@@ -442,7 +437,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/add-members`
+**Endpoint:** `/add-members`
 
 **Method:** `PUT`
 
@@ -467,7 +462,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/remove-member`
+**Endpoint:** `/remove-member`
 
 **Method:** `PUT`
 
@@ -492,7 +487,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/leave-group/:id`
+**Endpoint:** `/leave-group/:id`
 
 **Method:** `DELETE`
 
@@ -508,7 +503,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/changeGroupPicture/:id`
+**Endpoint:** `/changeGroupPicture/:id`
 
 **Method:** `PUT`
 
@@ -532,7 +527,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/renameGroup/:id`
+**Endpoint:** `/renameGroup/:id`
 
 **Method:** `PUT`
 
@@ -556,7 +551,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/send-attachments`
+**Endpoint:** `/send-attachments`
 
 **Method:** `POST`
 
@@ -580,7 +575,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/get-chat-details/:id`
+**Endpoint:** `/get-chat-details/:id`
 
 **Method:** `GET`
 
@@ -596,7 +591,7 @@ Authorization: Bearer <JWT Token>
 
 ---
 
-**Endpoint:** `/api/chat/get-message/:id`
+**Endpoint:** `/get-message/:id`
 
 **Method:** `GET`
 
@@ -607,6 +602,87 @@ Authorization: Bearer <JWT Token>
 ```
 Authorization: Bearer <JWT Token>
 ```
+
+---
+
+## Socket
+
+Socket.IO enables real-time, bidirectional communication between web clients and servers. In Gupshap ChatApp, it manages chat messages, user connections, and other real-time interactions to create a seamless and interactive user experience.
+
+### Socket.io Setup
+
+The Socket.IO server is initialized alongside the HTTP server created using Express. The setup includes CORS configuration to allow cross-origin requests from specified origins:
+
+```js
+const server = createServer(app);
+const io = new Server(server, {
+    cors: {
+        origin: process.env.CORS_ORIGIN,
+        credentials: true,
+    },
+    // FOR DEVELOPMENT USE
+    // cors: {
+    //     origin: process.env.CORS_ORIGIN_DEVELOPMENT,
+    //     credentials: true,
+    // },
+});
+const userSocketIDs = new Map();
+```
+
+### Middleware
+
+#### JWT Verification
+
+The verifyJWTSocket middleware function authenticates socket connections using JSON Web Tokens (JWT). This ensures that only authorized users can establish socket connections:
+
+```js
+io.use(verifyJWTSocket);
+```
+
+### Events
+
+#### Connection
+
+The `CONNECTION` event is triggered when a user connects. The user's socket ID is stored in the `userSocketIDs` map, associating it with the user's ID:
+
+```js
+io.on(CONNECTION, (socket) => {
+    console.log("User Connected", socket.id);
+
+    // Associate socket ID with user ID
+    userSocketIDs.set(socket.user._id.toString(), socket.id);
+});
+```
+
+#### New Message
+
+The `NEW_MESSAGE` event is triggered when a user sends a new message. The event handler performs the following steps:
+
+-   Validates the chat ID.
+-   Creates a real-time message object.
+-   Identifies other online members in the chat.
+-   Emits the new message to the identified members.
+-   Saves the message to the database.
+
+#### Disconnect
+
+The `DISCONNECT` event is triggered when a user disconnects. The user's socket ID is removed from the `userSocketIDs` map:
+
+```js
+socket.on(DISCONNECT, () => {
+    console.log(`User ${socket.id} got Disconnected!`);
+    userSocketIDs.delete(socket.user._id.toString());
+});
+```
+
+### Future Features
+
+Planned enhancements include:
+
+-   **Typing Indicators:** Events to indicate when a user is typing (START_TYPING and STOP_TYPING).
+-   **Read Receipts:** Events to mark messages as read.
+
+---
 
 ---
 
